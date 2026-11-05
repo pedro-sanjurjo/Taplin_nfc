@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Taplink · Panel del menú</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#1B222C;--card:#4A5F6E;--tx:#F2F1EC;--ac:#6C8B99;--line:rgba(242,241,236,.14)}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.4 Inter,system-ui,sans-serif}
+.wrap{max-width:720px;margin:0 auto;padding:20px 16px 100px}
+h1{font-size:20px;font-weight:600;margin:0}
+h2{font-size:15px;font-weight:600;margin:0 0 6px}
+.muted{color:var(--ac);font-size:13px}
+.card .muted,.cat .muted{color:#C9D6DC}
+.top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 22px}
+button,input,select{font:inherit}
+.btn{background:var(--tx);color:var(--bg);border:0;border-radius:10px;padding:10px 16px;font-weight:600;cursor:pointer}
+.btn.sec{background:transparent;color:var(--tx);border:1.5px solid var(--ac)}
+.btn:disabled{opacity:.5}
+[hidden]{display:none!important}
+.tabs{display:flex;gap:8px;overflow-x:auto;margin:18px 0 16px;scrollbar-width:none}
+.tabs button{flex:none;font:inherit;font-weight:500;color:var(--tx);background:transparent;border:1.5px solid var(--ac);border-radius:999px;padding:8px 16px;cursor:pointer}
+.tabs button.on{background:var(--tx);color:var(--bg);border-color:var(--tx)}
+:focus-visible{outline:2px solid var(--tx);outline-offset:2px}
+input,select{background:var(--bg);color:var(--tx);border:1.5px solid var(--ac);border-radius:10px;padding:10px 12px;width:100%;min-width:0}
+.cat{background:var(--card);border-radius:16px;padding:14px;margin-bottom:16px}
+.row{display:grid;grid-template-columns:1fr 96px 46px 24px;gap:10px;align-items:center;padding:9px 0;border-top:1px solid var(--line)}
+.row.off .nm{opacity:.5;text-decoration:line-through}
+.nm{font-weight:500;background:transparent;border:1.5px solid transparent;padding:8px 6px}
+.nm:focus{border-color:var(--ac);background:var(--bg)}
+.x{background:none;border:0;color:#C9D6DC;font-size:22px;line-height:1;cursor:pointer;padding:0}
+.add{display:grid;grid-template-columns:1fr 104px auto;gap:10px;margin-top:10px}
+.sw{position:relative;width:46px;height:26px}
+.sw input{opacity:0;position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;cursor:pointer;z-index:1}
+.sw i{position:absolute;inset:0;background:var(--bg);border-radius:20px;transition:background .15s}
+.sw i::after{content:"";position:absolute;top:3px;left:3px;width:20px;height:20px;border-radius:50%;background:var(--tx);transition:transform .15s}
+.sw input:checked+i{background:var(--ac)}
+.sw input:checked+i::after{transform:translateX(20px)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:flex-end;justify-content:center;z-index:5}
+.sheet{background:var(--bg);border:1px solid var(--line);border-radius:20px 20px 0 0;padding:20px;width:100%;max-width:560px;max-height:90vh;overflow:auto}
+.g3{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-top:12px}
+.g3 label{display:grid;gap:6px}
+.prev{margin:14px 0;max-height:230px;overflow:auto;font-size:13px}
+.prev div{display:flex;justify-content:space-between;gap:10px;padding:6px 0;border-top:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--tx);color:var(--bg);padding:12px 16px;border-radius:12px;display:flex;gap:14px;align-items:center;z-index:9;font-weight:500;max-width:92vw}
+.toast button{background:none;border:0;color:var(--bg);font-weight:700;text-decoration:underline;cursor:pointer}
+.center{min-height:100vh;display:grid;place-items:center;padding:20px}
+.box{width:100%;max-width:380px;display:grid;gap:12px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.js"></script>
+<script>
+// ====== CONFIGURACIÓN: pegá los datos de tu proyecto (Supabase > Project Settings > API) ======
+const SUPABASE_URL = 'https://vlghmumguheahejycksl.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZsZ2htdW1ndWhlYWhlanlja3NsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI5MDE0MzgsImV4cCI6MjEwODQ3NzQzOH0.PDXgCOPCuKvHAZQzlU3vXmvLJOD8uc9AFx52_0Y3edA';
+// ==========================================================================================
+
+const CONFIG_OK = /^https?:\/\//.test(SUPABASE_URL) && SUPABASE_KEY.length > 40;
+const sb = CONFIG_OK ? supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => new Intl.NumberFormat('es-AR', {style:'currency', currency:'ARS', maximumFractionDigits:0}).format(n);
+const slugify = s => s.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-|-$/g,'');
+let S = {user:null, local:null, cats:[], prods:[], lote:null};
+
+let tt;
+function toast(msg, label, act, ms = 2400){
+  document.querySelector('.toast')?.remove();
+  const t = document.createElement('div'); t.className = 'toast';
+  t.innerHTML = `<span>${esc(msg)}</span>${label ? `<button data-a="${act}">${label}</button>` : ''}`;
+  document.body.appendChild(t); clearTimeout(tt); tt = setTimeout(() => t.remove(), ms);
+}
+
+/* ---------- arranque y sesión ---------- */
+if (!CONFIG_OK) $('#app').innerHTML = '<div class="center"><div class="box"><h1>Falta configurar</h1><div class="muted">Pegá tu Project URL y tu anon key de Supabase en las dos primeras líneas del script y volvé a abrir el archivo.</div></div></div>';
+else sb.auth.onAuthStateChange((ev, s) => {
+  const u = s?.user || null;
+  const changed = ev === 'INITIAL_SESSION' || u?.id !== S.user?.id;
+  S.user = u;
+  if (changed) setTimeout(boot, 0);
+});
+
+async function boot(keepId){
+  if (!S.user) return loginView();
+  const {data} = await sb.from('locales').select('*').eq('owner_id', S.user.id).order('creado_en');
+  S.locales = data || [];
+  if (!S.locales.length) return crearLocalView();
+  let id = keepId;
+  try { id = id || localStorage.getItem('tl_local'); } catch (e) {}
+  S.local = S.locales.find(l => l.id === id) || S.locales[0];
+  await load(); view();
+}
+
+async function load(){
+  const id = S.local.id;
+  const [c, p, l] = await Promise.all([
+    sb.from('categorias').select('*').eq('local_id', id).order('orden').order('nombre'),
+    sb.from('productos').select('*').eq('local_id', id).order('orden').order('nombre'),
+    sb.from('locales').select('menu_actualizado_en').eq('id', id).single()
+  ]);
+  S.cats = c.data || []; S.prods = p.data || [];
+  S.local.menu_actualizado_en = l.data?.menu_actualizado_en;
+}
+
+/* ---------- vistas ---------- */
+function loginView(){
+  $('#app').innerHTML = `<div class="center"><div class="box">
+    <h1>Taplink</h1>
+    <div class="muted">Panel del menú. Ingresá tu mail y te enviamos un link para entrar.</div>
+    <input id="em" type="email" placeholder="tu@mail.com" autocomplete="email">
+    <button class="btn" data-a="login">Enviarme el link</button>
+    <div class="muted" id="msg"></div></div></div>`;
+}
+
+function crearLocalView(){
+  $('#app').innerHTML = `<div class="center"><div class="box">
+    <h1>Creá tu local</h1>
+    <div class="muted">Es el nombre que van a ver tus clientes en el menú.</div>
+    <input id="ln" placeholder="Nombre del local" maxlength="60">
+    <button class="btn" data-a="crearlocal">Crear local</button>
+    ${S.local ? '<button class="btn sec" data-a="volver">Volver</button>' : ''}
+    <div class="muted" id="msg"></div></div></div>`;
+}
+
+const rowHtml = p => `<div class="row ${p.disponible ? '' : 'off'}" data-id="${p.id}">
+  <input class="nm" value="${esc(p.nombre)}" maxlength="80" aria-label="Nombre del producto">
+  <input class="pr" type="number" inputmode="numeric" min="0" value="${p.precio}" aria-label="Precio de ${esc(p.nombre)}">
+  <label class="sw" title="Disponible"><input type="checkbox" class="dv" ${p.disponible ? 'checked' : ''} aria-label="Disponible"><i></i></label>
+  <button class="x" data-a="delprod" aria-label="Borrar producto">×</button>
+</div>`;
+
+function view(){
+  const L = S.local;
+  const fecha = L.menu_actualizado_en ? new Date(L.menu_actualizado_en).toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'}) : 'sin cambios todavía';
+  $('#app').innerHTML = `<div class="wrap">
+    <div class="top"><div><h1>${esc(L.nombre)}</h1><div class="muted" id="fecha">Precios actualizados: ${fecha}</div></div>
+      <button class="btn sec" data-a="salir">Salir</button></div>
+    <div class="add" style="grid-template-columns:1fr auto;margin:14px 0 0">
+      <input id="ln2" value="${esc(L.nombre)}" maxlength="60" aria-label="Nombre del local">
+      <button class="btn sec" data-a="renombrar">Guardar nombre</button></div>
+    <div class="add" style="grid-template-columns:1fr auto;margin:10px 0 0">
+      <select id="ls" aria-label="Cambiar de local">${S.locales.map(l => `<option value="${l.id}" ${l.id === L.id ? 'selected' : ''}>${esc(l.nombre)}</option>`).join('')}</select>
+      <button class="btn sec" data-a="nuevolocal">+ Nuevo local</button></div>
+    <div class="add" style="grid-template-columns:1fr auto;margin:14px 0 0">
+      <input id="gr" placeholder="Link de reseñas de Google del local" value="${esc(L.google_review_url || '')}">
+      <button class="btn sec" data-a="guardarurl">Guardar link</button></div>
+    <div class="add" style="grid-template-columns:1fr auto;margin:10px 0 0">
+      <input id="mx" placeholder="Link del menú que el local ya tiene (opcional)" value="${esc(L.menu_externo_url || '')}">
+      <button class="btn sec" data-a="guardarmenu">Guardar</button></div>
+    <div class="muted" style="margin-top:6px">Si cargás un link acá, la tarjeta muestra los botones "Ver menú" y "Reseña" y no usa los productos de abajo.</div>
+    <div class="cat" style="margin-top:18px"><h2>Contacto y Wi-Fi</h2>
+      <div class="add" style="grid-template-columns:1fr 1fr;margin:8px 0 0">
+        <input id="wa" placeholder="WhatsApp (ej: 5491112345678)" value="${esc(L.whatsapp || '')}">
+        <input id="ig" placeholder="Instagram (usuario)" value="${esc(L.instagram || '')}"></div>
+      <div class="add" style="grid-template-columns:1fr;margin:10px 0 0"><input id="dr" placeholder="Dirección (calle, número, ciudad)" value="${esc(L.direccion || '')}"></div>
+      <div class="add" style="grid-template-columns:1fr 1fr;margin:10px 0 0">
+        <input id="wn" placeholder="Nombre de la red Wi-Fi" value="${esc(L.wifi_nombre || '')}">
+        <input id="wc" placeholder="Clave del Wi-Fi" value="${esc(L.wifi_clave || '')}"></div>
+      <button class="btn" style="margin-top:12px" data-a="guardarextras">Guardar</button></div>
+    <div class="cat" style="margin-top:18px"><h2>Estadísticas</h2>
+      <select id="dias" aria-label="Período"><option value="7">Últimos 7 días</option><option value="30" selected>Últimos 30 días</option><option value="90">Últimos 90 días</option></select>
+      <div id="est" class="muted" style="margin-top:10px">Cargando…</div></div>
+    <div class="cat" style="margin-top:18px"><h2>Diseño de la página del cliente</h2>
+      <div class="add" style="grid-template-columns:1fr 1fr;margin:8px 0 0">
+        <label class="muted">Tema<select id="tm"><option value="oscuro" ${L.tema !== 'claro' ? 'selected' : ''}>Oscuro</option><option value="claro" ${L.tema === 'claro' ? 'selected' : ''}>Claro</option></select></label>
+        <label class="muted">Color de acento<input id="ca" type="color" value="${L.color_acento || '#6C8B99'}" style="height:44px;padding:4px"></label></div>
+      <div class="muted" style="margin-top:12px">Logo (PNG, JPG o WebP)</div>
+      <div class="add" style="grid-template-columns:auto 1fr;align-items:center;margin-top:6px">
+        ${L.logo_url ? `<img src="${esc(L.logo_url)}" alt="Logo actual" style="height:44px;max-width:120px;object-fit:contain;border-radius:8px">` : '<span></span>'}
+        <input id="lg" type="file" accept="image/png,image/jpeg,image/webp"></div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap">
+        <button class="btn" data-a="guardardiseno">Guardar diseño</button>
+        ${L.logo_url ? '<button class="btn sec" data-a="quitarlogo">Quitar logo</button>' : ''}
+        <a class="btn sec" style="text-decoration:none" href="/m/${esc(L.slug)}" target="_blank" rel="noopener">Ver cómo lo ve el cliente</a></div></div>
+    <div class="bar">
+      <button class="btn" data-a="aumento">Aumentar precios</button>
+      ${S.lote ? '<button class="btn sec" data-a="deshacer">Deshacer último aumento</button>' : ''}
+    </div>
+    ${S.cats.map(c => {
+      const ps = S.prods.filter(p => p.categoria_id === c.id);
+      return `<section class="cat"><div style="display:flex;justify-content:space-between;align-items:center;gap:10px"><h2 style="margin:0">${esc(c.nombre)}</h2><button class="x" data-a="delcat" data-id="${c.id}" style="font-size:13px;text-decoration:underline">Borrar categoría</button></div>
+        ${ps.map(rowHtml).join('') || '<div class="muted">Todavía no hay productos en esta categoría.</div>'}
+        <div class="add" data-cat="${c.id}">
+          <input class="an" placeholder="Producto" maxlength="80">
+          <input class="ap" placeholder="Precio" type="number" inputmode="numeric" min="0">
+          <button class="btn sec" data-a="addprod">Sumar</button></div></section>`;
+    }).join('') || '<div class="muted" style="margin-bottom:16px">Empezá creando una categoría, por ejemplo Cafetería o Postres.</div>'}
+    <div class="add" style="grid-template-columns:1fr auto">
+      <input id="nc" placeholder="Nueva categoría" maxlength="40">
+      <button class="btn sec" data-a="addcat">Crear categoría</button></div>
+  </div>`;
+}
+
+/* ---------- aumento masivo ---------- */
+function calc(){
+  const pct = parseFloat($('#pc').value), ct = $('#ct').value, r = +$('#rd').value;
+  const items = isNaN(pct) ? [] : S.prods.filter(p => !ct || p.categoria_id === ct)
+    .map(p => ({p, n: Math.round(p.precio * (1 + pct / 100) / r) * r}));
+  return {pct, ct, r, items};
+}
+function prev(){
+  const {items} = calc();
+  $('#pv').innerHTML = items.map(({p, n}) => `<div><span>${esc(p.nombre)}</span><span>${money(p.precio)} → <b>${money(n)}</b></span></div>`).join('')
+    || '<span class="muted">No hay productos para mostrar.</span>';
+}
+function openAumento(){
+  const m = document.createElement('div'); m.className = 'modal'; m.id = 'mod';
+  m.innerHTML = `<div class="sheet"><h1>Aumentar precios</h1>
+    <p class="muted">Con un número negativo, los precios bajan.</p>
+    <div class="g3">
+      <label class="muted">Porcentaje (%)<input id="pc" type="number" step="0.1" value="10"></label>
+      <label class="muted">Categoría<select id="ct"><option value="">Todo el menú</option>${S.cats.map(c => `<option value="${c.id}">${esc(c.nombre)}</option>`).join('')}</select></label>
+      <label class="muted">Redondeo<select id="rd">${[1,10,50,100,500].map(n => `<option value="${n}" ${n === 100 ? 'selected' : ''}>${n === 1 ? 'Sin redondeo' : 'A múltiplos de $' + n}</option>`).join('')}</select></label>
+    </div>
+    <div class="prev" id="pv"></div>
+    <div style="display:flex;gap:10px"><button class="btn" data-a="aplicar">Aplicar aumento</button><button class="btn sec" data-a="cerrar">Cancelar</button></div></div>`;
+  document.body.appendChild(m); m.addEventListener('input', prev); prev();
+}
+
+/* ---------- acciones ---------- */
+document.addEventListener('click', async e => {
+  const b = e.target.closest('[data-a]'); if (!b) return;
+  const a = b.dataset.a;
+
+  if (a === 'login') {
+    const email = $('#em').value.trim(); if (!email) return;
+    b.disabled = true;
+    const {error} = await sb.auth.signInWithOtp({email, options:{emailRedirectTo: location.href.split('#')[0]}});
+    $('#msg').textContent = error ? 'No pudimos enviar el mail: ' + error.message : 'Listo. Revisá tu mail y abrí el link.';
+    b.disabled = false;
+  }
+  else if (a === 'salir') await sb.auth.signOut();
+  else if (a === 'crearlocal') {
+    const nombre = $('#ln').value.trim(); if (!nombre) return;
+    b.disabled = true;
+    let slug = slugify(nombre) || 'local';
+    let {error} = await sb.from('locales').insert({owner_id:S.user.id, nombre, slug, modulo_menu:true});
+    if (error && error.code === '23505') {            // el slug ya existe: probamos con un sufijo
+      slug += '-' + Math.random().toString(36).slice(2, 6);
+      ({error} = await sb.from('locales').insert({owner_id:S.user.id, nombre, slug, modulo_menu:true}));
+    }
+    if (error) { $('#msg').textContent = 'No se pudo crear: ' + error.message; b.disabled = false; return; }
+    const nuevo = (await sb.from('locales').select('id').eq('slug', slug).single()).data;
+    try { localStorage.setItem('tl_local', nuevo?.id || ''); } catch (e) {}
+    boot(nuevo?.id);
+  }
+  else if (a === 'addcat') {
+    const nombre = $('#nc').value.trim(); if (!nombre) return;
+    const {data, error} = await sb.from('categorias').insert({local_id:S.local.id, nombre, orden:S.cats.length}).select().single();
+    if (error) return toast('No se pudo crear la categoría');
+    S.cats.push(data); view();
+  }
+  else if (a === 'addprod') {
+    const box = b.closest('.add'), nombre = box.querySelector('.an').value.trim(), precio = parseFloat(box.querySelector('.ap').value);
+    if (!nombre || isNaN(precio) || precio < 0) return toast('Poné nombre y precio');
+    const cat = box.dataset.cat;
+    const orden = S.prods.filter(p => p.categoria_id === cat).length;
+    const {data, error} = await sb.from('productos').insert({local_id:S.local.id, categoria_id:cat, nombre, precio, orden}).select().single();
+    if (error) return toast('No se pudo sumar el producto');
+    S.prods.push(data); view();
+  }
+  else if (a === 'renombrar') {
+    const nombre = $('#ln2').value.trim(); if (!nombre) return toast('Poné un nombre');
+    const {error} = await sb.from('locales').update({nombre}).eq('id', S.local.id);
+    if (error) return toast('No se pudo guardar el nombre');
+    S.local.nombre = nombre; view(); toast('Nombre guardado');
+  }
+  else if (a === 'nuevolocal') crearLocalView();
+  else if (a === 'volver') view();
+  else if (a === 'delprod') {
+    const row = b.closest('.row'), p = S.prods.find(x => x.id === row.dataset.id);
+    if (!p || !confirm('¿Borrar "' + p.nombre + '"?')) return;
+    const {error} = await sb.from('productos').delete().eq('id', p.id);
+    if (error) return toast('No se pudo borrar');
+    S.prods = S.prods.filter(x => x.id !== p.id); view(); toast('Producto borrado');
+  }
+  else if (a === 'tab') { S.tab = b.dataset.t; mostrarTab(); }
+  else if (a === 'delcat') {
+    const c = S.cats.find(x => x.id === b.dataset.id); if (!c) return;
+    const n = S.prods.filter(p => p.categoria_id === c.id).length;
+    if (!confirm('¿Borrar la categoría "' + c.nombre + '"' + (n ? ' y sus ' + n + ' productos' : '') + '? No se puede deshacer.')) return;
+    const {error} = await sb.from('categorias').delete().eq('id', c.id);
+    if (error) return toast('No se pudo borrar la categoría');
+    S.cats = S.cats.filter(x => x.id !== c.id); S.prods = S.prods.filter(p => p.categoria_id !== c.id);
+    view(); toast('Categoría borrada');
+  }
+  else if (a === 'guardarextras') {
+    const v = id => $('#' + id).value.trim() || null;
+    const upd = {whatsapp: v('wa'), instagram: v('ig'), direccion: v('dr'), wifi_nombre: v('wn'), wifi_clave: v('wc')};
+    const {error} = await sb.from('locales').update(upd).eq('id', S.local.id);
+    if (error) return toast('No se pudo guardar');
+    Object.assign(S.local, upd); toast('Guardado');
+  }
+  else if (a === 'quitarlogo') {
+    if (!confirm('¿Quitar el logo de la página del cliente?')) return;
+    await sb.storage.from('logos').remove([S.local.id + '/logo']);
+    const {error} = await sb.from('locales').update({logo_url: null}).eq('id', S.local.id);
+    if (error) return toast('No se pudo quitar el logo');
+    S.local.logo_url = null; view(); toast('Logo quitado');
+  }
+  else if (a === 'guardardiseno') {
+    b.disabled = true;
+    const upd = {tema: $('#tm').value, color_acento: $('#ca').value};
+    const f = $('#lg').files[0];
+    if (f) {
+      try {
+        const img = await new Promise((ok, no) => { const i = new Image(); i.onload = () => ok(i); i.onerror = no; i.src = URL.createObjectURL(f); });
+        const k = Math.min(1, 480 / img.width), c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        const blob = await new Promise(r => c.toBlob(r, 'image/webp', .9));
+        const path = S.local.id + '/logo';
+        const {error: e1} = await sb.storage.from('logos').upload(path, blob, {upsert: true, contentType: blob.type});
+        if (e1) throw e1;
+        upd.logo_url = sb.storage.from('logos').getPublicUrl(path).data.publicUrl + '?v=' + Date.now();
+      } catch (err) { b.disabled = false; return toast('No se pudo subir el logo', null, null, 3500); }
+    }
+    const {error} = await sb.from('locales').update(upd).eq('id', S.local.id);
+    b.disabled = false;
+    if (error) return toast('No se pudo guardar el diseño');
+    Object.assign(S.local, upd); view(); toast('Diseño guardado');
+  }
+  else if (a === 'guardarurl') {
+    const url = $('#gr').value.trim();
+    if (url && !/^https:\/\//.test(url)) return toast('El link tiene que empezar con https://', null, null, 3500);
+    const {error} = await sb.from('locales').update({google_review_url: url || null}).eq('id', S.local.id);
+    if (error) return toast('No se pudo guardar el link');
+    S.local.google_review_url = url || null; toast('Link guardado');
+  }
+  else if (a === 'guardarmenu') {
+    const url = $('#mx').value.trim();
+    if (url && !/^https:\/\//.test(url)) return toast('El link tiene que empezar con https://', null, null, 3500);
+    const {error} = await sb.from('locales').update({menu_externo_url: url || null}).eq('id', S.local.id);
+    if (error) return toast('No se pudo guardar el link del menú');
+    S.local.menu_externo_url = url || null; toast('Link del menú guardado');
+  }
+  else if (a === 'aumento') openAumento();
+  else if (a === 'cerrar') $('#mod')?.remove();
+  else if (a === 'aplicar') {
+    const {pct, ct, r} = calc();
+    if (isNaN(pct) || pct === 0) return toast('Poné un porcentaje');
+    if (Math.abs(pct) >= 50 && !confirm('Es un cambio de ' + pct + '%. ¿Seguro que es correcto?')) return;
+    b.disabled = true;
+    const {data, error} = await sb.rpc('aplicar_aumento', {p_local:S.local.id, p_porcentaje:pct, p_categoria:ct || null, p_redondeo:r});
+    if (error) { b.disabled = false; return toast('Error: ' + error.message, null, null, 4000); }
+    S.lote = data; $('#mod').remove(); await load(); view();
+    toast('Precios actualizados', 'Deshacer', 'deshacer', 8000);
+  }
+  else if (a === 'deshacer') {
+    if (!S.lote) return;
+    const {error} = await sb.rpc('deshacer_lote', {p_lote:S.lote});
+    if (error) return toast('No se pudo deshacer: ' + error.message, null, null, 4000);
+    S.lote = null; await load(); view(); toast('Cambio deshecho');
+  }
+});
+
+document.addEventListener('change', async e => {
+  const row = e.target.closest('.row'); if (!row) return;
+  const p = S.prods.find(x => x.id === row.dataset.id); if (!p) return;
+  if (e.target.classList.contains('nm')) {
+    const v = e.target.value.trim();
+    if (!v) { e.target.value = p.nombre; return; }
+    if (v === p.nombre) return;
+    const {error} = await sb.from('productos').update({nombre:v}).eq('id', p.id);
+    if (error) { e.target.value = p.nombre; return toast('No se pudo guardar el nombre'); }
+    p.nombre = v; toast('Nombre guardado');
+  } else if (e.target.classList.contains('pr')) {
+    const v = parseFloat(e.target.value);
+    if (isNaN(v) || v < 0) { e.target.value = p.precio; return; }
+    if (v === +p.precio) return;
+    const {error} = await sb.from('productos').update({precio:v}).eq('id', p.id);
+    if (error) { e.target.value = p.precio; return toast('No se pudo guardar el precio'); }
+    p.precio = v;
+    S.local.menu_actualizado_en = new Date().toISOString();
+    $('#fecha').textContent = 'Precios actualizados: ' + new Date().toLocaleString('es-AR', {dateStyle:'short', timeStyle:'short'});
+    toast('Precio guardado');
+  } else if (e.target.classList.contains('dv')) {
+    const d = e.target.checked;
+    const {error} = await sb.from('productos').update({disponible:d}).eq('id', p.id);
+    if (error) { e.target.checked = !d; return toast('No se pudo guardar'); }
+    p.disponible = d; row.classList.toggle('off', !d);
+  }
+});
+
+document.addEventListener('change', e => {
+  if (e.target.id !== 'ls') return;
+  try { localStorage.setItem('tl_local', e.target.value); } catch (err) {}
+  boot(e.target.value);
+});
+
+async function cargarStats(){
+  const box = $('#est'); if (!box || !S.local) return;
+  const {data, error} = await sb.rpc('estadisticas', {p_local: S.local.id, p_dias: +($('#dias')?.value || 30)});
+  if (error) { box.textContent = 'No se pudieron cargar las estadísticas.'; return; }
+  const tot = {}, mesas = {};
+  (data || []).forEach(r => { tot[r.tipo] = (tot[r.tipo] || 0) + Number(r.total); (mesas[r.mesa] = mesas[r.mesa] || {})[r.tipo] = Number(r.total); });
+  const n = k => tot[k] || 0;
+  const filas = Object.entries(mesas).sort((a, b) => (b[1].escaneo || 0) - (a[1].escaneo || 0))
+    .map(([m, o]) => `<div class="row" style="grid-template-columns:1fr 70px 70px"><div>${esc(m === 'sin mesa' ? 'Sin mesa' : 'Mesa ' + m)}</div><div>${o.escaneo || 0}</div><div>${o.resena || 0}</div></div>`).join('');
+  box.innerHTML = `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:10px;color:var(--tx)">
+    ${[['Escaneos', n('escaneo')], ['Tocaron reseña', n('resena')], ['Wi-Fi', n('wifi')], ['WhatsApp', n('whatsapp')], ['Cómo llegar', n('mapa')]].map(([t, v]) => `<div><div style="font-size:26px;font-weight:600">${v}</div><div class="muted">${t}</div></div>`).join('')}</div>
+    ${filas ? `<div class="row" style="grid-template-columns:1fr 70px 70px;margin-top:12px"><div class="muted">Por mesa</div><div class="muted">Escaneos</div><div class="muted">Reseña</div></div>${filas}` : '<div style="margin-top:10px">Todavía no hay datos en este período.</div>'}`;
+}
+document.addEventListener('change', e => { if (e.target.id === 'dias') cargarStats(); });
+S.tab = 'menu';
+function mostrarTab(){
+  document.querySelectorAll('[data-tab]').forEach(el => el.hidden = el.dataset.tab !== S.tab);
+  document.querySelectorAll('.tabs button').forEach(b => b.classList.toggle('on', b.dataset.t === S.tab));
+}
+function armarTabs(){
+  const w = document.querySelector('.wrap'); if (!w) return;
+  const tag = (el, t) => { el = el && el.closest('.wrap > *'); if (el) el.dataset.tab = t; return el; };
+  tag(w.querySelector('.bar'), 'menu'); tag($('#nc'), 'menu');
+  w.querySelectorAll('section.cat').forEach(e => e.dataset.tab = 'menu');
+  tag($('#ln2'), 'local'); tag($('#gr'), 'local'); tag($('#wa'), 'local');
+  const mx = tag($('#mx'), 'local'); if (mx && mx.nextElementSibling) mx.nextElementSibling.dataset.tab = 'local';
+  tag($('#lg'), 'diseno'); tag($('#est'), 'stats');
+  const sel = $('#ls').closest('.wrap > *');
+  const tabs = [['menu', 'Menú'], ['local', 'Datos del local'], ['diseno', 'Diseño'], ['stats', 'Estadísticas']];
+  sel.insertAdjacentHTML('afterend', `<div class="tabs">${tabs.map(([k, t]) => `<button data-a="tab" data-t="${k}">${t}</button>`).join('')}</div>`);
+  mostrarTab();
+}
+const _view = view; view = function(){ _view(); armarTabs(); cargarStats(); };
+
+document.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && e.target.classList.contains('pr')) e.target.blur();
+});
+</script>
+</body>
+</html>
